@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".CampsiteViewActivity">
+
+    <TextView
+        android:id="@+id/campsiteName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Campsite Name"
+        android:textSize="30sp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageButton
+        android:id="@+id/favoriteButton"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="10dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:background="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:srcCompat="@drawable/bookmarkunselected" />
+
+    <ImageButton
+        android:id="@+id/star1"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@null"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="50dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:layout_constraintEnd_toStartOf="@+id/star2"
+        app:srcCompat="@drawable/starunselected" />
+
+    <ImageButton
+        android:id="@+id/star2"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@null"
+        android:layout_marginTop="10dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toEndOf="@+id/star1"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:layout_constraintEnd_toStartOf="@+id/star3"
+        app:srcCompat="@drawable/starunselected" />
+
+    <ImageButton
+        android:id="@+id/star3"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@null"
+        android:layout_marginTop="10dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toEndOf="@+id/star2"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:layout_constraintEnd_toStartOf="@+id/star4"
+        app:srcCompat="@drawable/starunselected" />
+
+    <ImageButton
+        android:id="@+id/star4"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@null"
+        android:layout_marginTop="10dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toEndOf="@+id/star3"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:layout_constraintEnd_toStartOf="@+id/star5"
+        app:srcCompat="@drawable/starunselected" />
+
+    <ImageButton
+        android:id="@+id/star5"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@null"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="50dp"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/star4"
+        app:layout_constraintTop_toBottomOf="@+id/campsiteName"
+        app:srcCompat="@drawable/starunselected" />
+
+    <TextView
+        android:id="@+id/stateName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="State Name"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/star3"
+        app:layout_constraintBottom_toTopOf="@+id/cityName"/>
+
+    <TextView
+        android:id="@+id/cityName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="City Name"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/login_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/stateName" />
+
+    <!-- Weather Info and Maps Button -->
+    <com.twitter.sdk.android.core.identity.TwitterLoginButton
+        android:id="@+id/login_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/weatherLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/cityName" />
+
+    <LinearLayout
+        android:id="@+id/weatherLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/imageComingSoon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Current weather in this city"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:id="@+id/weatherDescription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Weather description"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:id="@+id/weatherDegrees"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Weather Degrees"
+            android:layout_marginBottom="25dp"/>
+
+        <Button
+            android:id="@+id/googleMapsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Open In Google Maps"
+            android:onClick="OpenGoogleMaps"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
