@@ -28,22 +28,12 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class CampsiteViewActivity extends AppCompatActivity {
 
-    TextView campsiteNameTextView;
-    TextView stateNameTextView;
-    TextView cityNameTextView;
+    Campsite currentCampsite;
+
     TextView weatherDescription;
     TextView weatherDegrees;
 
-    String campsiteName;
-    String campsiteState;
-    String campsiteCity;
-
-    double campsiteLatitude;
-    double campsiteLongitude;
-
     TwitterLoginButton loginButton;
-
-    private final String WEATHER_API_KEY = "211a551ddc0f903aa285b79abbe67355";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +56,7 @@ public class CampsiteViewActivity extends AppCompatActivity {
                 // The tweet contains vital information about the campsite that the user logged
                 // in from. The user may edit this tweet before tweeting it, or send it as is.
                 TweetComposer.Builder builder = new TweetComposer.Builder(thisActivity)
-                        .text("I'm camping in " + campsiteCity + ", " + campsiteState + " at campsite: " + campsiteName);
+                        .text("I'm camping in " + currentCampsite.getCity() + ", " + currentCampsite.getState() + " at campsite: " + currentCampsite.getName());
                 builder.show();
             }
 
@@ -76,36 +66,46 @@ public class CampsiteViewActivity extends AppCompatActivity {
             }
         });
 
-        // Get the controls from the layout
-        campsiteNameTextView = findViewById(R.id.campsiteName);
-        stateNameTextView = findViewById(R.id.stateName);
-        cityNameTextView = findViewById(R.id.cityName);
+        // Get the Campsite object from the intent
+        currentCampsite = (Campsite) getIntent().getSerializableExtra("campsite");
+
+        // Set the TextView texts from the Campsite object
+        TextView campsiteNameTextView = findViewById(R.id.campsiteName);
+        campsiteNameTextView.setText("Name: " + currentCampsite.getName());
+
+        TextView stateNameTextView = findViewById(R.id.stateName);
+        stateNameTextView.setText("State: " + currentCampsite.getState());
+
+        TextView cityNameTextView  = findViewById(R.id.cityName);
+        cityNameTextView.setText("City: " + currentCampsite.getCity());
+
+        // Get the weather related controls from the layout
         weatherDescription = findViewById(R.id.weatherDescription);
         weatherDegrees = findViewById(R.id.weatherDegrees);
-
-        // Get the information from the campsite being opened in the view
-        campsiteName = getIntent().getStringExtra("CAMPSITE_NAME");
-        campsiteState = getIntent().getStringExtra("CAMPSITE_STATE");
-        campsiteCity = getIntent().getStringExtra("CAMPSITE_CITY");
-        campsiteLatitude = getIntent().getDoubleExtra("CAMPSITE_LATITUDE", 0.0);
-        campsiteLongitude = getIntent().getDoubleExtra("CAMPSITE_LONGITUDE", 0.0);
-
-        // Put the campsite information into the text views
-        campsiteNameTextView.setText("Name: " + campsiteName);
-        stateNameTextView.setText("State: " + campsiteState);
-        cityNameTextView.setText("City: " + campsiteCity);
 
         // Start the weather thread to make the HTTP request
         WeatherThread wt = new WeatherThread();
         wt.start();
     }
 
-    // This opens a Google Maps intent at the location of the campsite the user is currently viewing
-    // The user may use this location for navigation purposes or to decide on which campsite
-    // they wish to visit
+    /**
+     * Toggles the 'bookmark' status of the current campsite.
+     * Adds/removes the current campsite to/from the bookmarked campsites table in the DB
+     * @param view
+     */
+    public void ToggleBookmark(View view) {
+        // TODO: Add logic for adding/removing bookmarked campsites during enhancement 3
+    }
+
+    /**
+     * This opens a Google Maps intent at the location of the campsite the user is currently viewing
+     * The user may use this location for navigation purposes or to decide on which campsite
+     * they wish to visit
+     * @param view
+     */
     public void OpenGoogleMaps(View view) {
         // Create a Uri using the campsite location data
-        Uri intentUri = Uri.parse("geo:0,0?q=" + campsiteLatitude + "," + campsiteLongitude + "(" + campsiteName + ")");
+        Uri intentUri = Uri.parse("geo:0,0?q=" + currentCampsite.getLatitude() + "," + currentCampsite.getLongitude() + "(" + currentCampsite.getName() + ")");
         // Create a map intent with this URI
         Intent mapIntent = new Intent(Intent.ACTION_VIEW, intentUri);
         // Set Google Maps as the intent package
@@ -114,8 +114,12 @@ public class CampsiteViewActivity extends AppCompatActivity {
         startActivity(mapIntent);
     }
 
-    // Returns the abbreviation of a given state
-    // Useful when building the URL string for calls to the weather API
+    /**
+     * Returns the abbreviation of a given state
+     * Useful when building the URL string for calls to the weather API
+     * @param stateName
+     * @return
+     */
     private String getStateAbbreviation(String stateName) {
         switch (stateName.toLowerCase()) {
             case "alabama": return "al";
@@ -172,17 +176,21 @@ public class CampsiteViewActivity extends AppCompatActivity {
         }
     }
 
-    // Makes an HTTP get request to gather weather data about the campsite's location
-    // This gives the user an overall indication of the weather at the campsite's location
-    // The user may use this information to decide on a campsite to visit
+    /**
+     * Makes an HTTP get request to gather weather data about the campsite's location
+     * This gives the user an overall indication of the weather at the campsite's location
+     * The user may use this information to decide on a campsite to visit
+     */
     class WeatherThread extends Thread {
         public void run() {
             try {
+                final String WEATHER_API_KEY = "211a551ddc0f903aa285b79abbe67355";
+
                 // Make a URL string to make a request from the weather API
                 String urlString = "https://api.openweathermap.org/data/2.5/weather?q=";
-                urlString += campsiteCity.toLowerCase();
+                urlString += currentCampsite.getCity().toLowerCase();
                 urlString += ",";
-                urlString += getStateAbbreviation(campsiteState);
+                urlString += getStateAbbreviation(currentCampsite.getState());
                 urlString += ",us&units=imperial&appid=";
                 urlString += WEATHER_API_KEY;
 

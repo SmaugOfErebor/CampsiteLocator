@@ -1,8 +1,9 @@
 package justinnelson.cs360.com;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Campsite {
+public class Campsite implements Serializable {
 
     // Instance variables
     private int id;
