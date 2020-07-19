@@ -12,6 +12,10 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 public class SearchCampsitesActivity extends AppCompatActivity {
 
     private EditText campsiteNameET;
@@ -49,16 +53,16 @@ public class SearchCampsitesActivity extends AppCompatActivity {
 
         Campsite campsite = dbHandler.searchCampsite(campsiteNameET.getText().toString());
 
-        // TODO: create the page to display campsite information instead of using toast
         if (campsite != null) {
-            // Start a campsite view activity with the search results
-            Intent newIntent = new Intent(this, CampsiteViewActivity.class);
-            newIntent.putExtra("CAMPSITE_NAME", campsite.getName());
-            newIntent.putExtra("CAMPSITE_STATE", campsite.getState());
-            newIntent.putExtra("CAMPSITE_CITY", campsite.getCity());
-            newIntent.putExtra("CAMPSITE_LATITUDE", campsite.getLatitude());
-            newIntent.putExtra("CAMPSITE_LONGITUDE", campsite.getLongitude());
+            // TODO: Remove this conversion once the DBHandler search returns a list after enhancement 2
+            List<Campsite> campsiteList = new ArrayList<>();
+            campsiteList.add(campsite);
+
+            // Start a campsite list view activity with the search results
+            Intent newIntent = new Intent(this, CampsiteListViewActivity.class);
+            newIntent.putExtra("campsiteList", (Serializable) campsiteList);
             this.startActivity(newIntent);
+
         } else {
             Toast.makeText(this, "No campsite found with name: " +
                     campsiteNameET.getText().toString(), Toast.LENGTH_LONG).show();

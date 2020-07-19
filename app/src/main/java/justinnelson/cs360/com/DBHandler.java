@@ -145,6 +145,8 @@ public class DBHandler extends SQLiteOpenHelper {
 
     // This method searches the database for a campsite
     public Campsite searchCampsite(String campsiteName) {
+        // TODO: Return a list of Campsites when searching after implementing fuzzy search in enhancement 2
+
         // Build the query
         String query = "SELECT * FROM " + TABLE_CAMPSITES +
                 " WHERE " + CAMPSITE_COLUMN_NAME +

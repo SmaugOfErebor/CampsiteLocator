@@ -27,7 +27,8 @@
         android:background="@null"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/campsiteName"
-        app:srcCompat="@drawable/bookmarkunselected" />
+        app:srcCompat="@drawable/bookmarkunselected"
+        android:onClick="ToggleBookmark"/>
 
     <ImageButton
         android:id="@+id/star1"
