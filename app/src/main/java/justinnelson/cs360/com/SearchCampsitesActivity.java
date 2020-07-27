@@ -4,7 +4,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -14,7 +13,6 @@ import android.widget.Toast;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 
 public class SearchCampsitesActivity extends AppCompatActivity {
 
@@ -51,13 +49,9 @@ public class SearchCampsitesActivity extends AppCompatActivity {
     public void searchCampsites(View view) {
         DBHandler dbHandler = new DBHandler(this, null, null, 0);
 
-        Campsite campsite = dbHandler.searchCampsite(campsiteNameET.getText().toString());
+        ArrayList<Campsite> campsiteList = dbHandler.fuzzySearchCampsite(campsiteNameET.getText().toString());
 
-        if (campsite != null) {
-            // TODO: Remove this conversion once the DBHandler search returns a list after enhancement 2
-            List<Campsite> campsiteList = new ArrayList<>();
-            campsiteList.add(campsite);
-
+        if (!campsiteList.isEmpty()) {
             // Start a campsite list view activity with the search results
             Intent newIntent = new Intent(this, CampsiteListViewActivity.class);
             newIntent.putExtra("campsiteList", (Serializable) campsiteList);

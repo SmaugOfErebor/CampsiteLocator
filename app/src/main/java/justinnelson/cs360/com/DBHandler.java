@@ -102,7 +102,11 @@ public class DBHandler extends SQLiteOpenHelper {
         Cursor cursor = db.rawQuery(query, null);
 
         // If moveToFirst is successful, the account exists
-        return cursor.moveToFirst();
+        Boolean usernameExists = cursor.moveToFirst();
+
+        cursor.close();
+
+        return usernameExists;
     }
 
     public Boolean accountLogin(String username, String password) {
@@ -118,7 +122,11 @@ public class DBHandler extends SQLiteOpenHelper {
         Cursor cursor = db.rawQuery(query, null);
 
         // If moveToFirst succeeds, login is successful
-        return cursor.moveToFirst();
+        Boolean successfulLogin = cursor.moveToFirst();
+
+        cursor.close();
+
+        return successfulLogin;
     }
 
     // This method adds a new campsite to the database
@@ -143,48 +151,175 @@ public class DBHandler extends SQLiteOpenHelper {
         }
     }
 
-    // This method searches the database for a campsite
+    /**
+     * This method searches for a Campsite by exact match
+     * @param campsiteName
+     * @return
+     */
     public Campsite searchCampsite(String campsiteName) {
-        // TODO: Return a list of Campsites when searching after implementing fuzzy search in enhancement 2
-
         // Build the query
         String query = "SELECT * FROM " + TABLE_CAMPSITES +
-                " WHERE " + CAMPSITE_COLUMN_NAME +
-                " = \"" + campsiteName + "\"";
+                       " WHERE " + CAMPSITE_COLUMN_NAME +
+                       " = \"" + campsiteName + "\"";
 
         SQLiteDatabase db = this.getWritableDatabase();
 
         Cursor cursor = db.rawQuery(query, null);
 
-        Campsite campsite = new Campsite();
+        Campsite campsite = null;
 
         if (cursor.moveToFirst()) {
-            cursor.moveToFirst();
-            campsite.setId(Integer.parseInt(cursor.getString(0)));
-            campsite.setName(cursor.getString(1));
-            campsite.setState(cursor.getString(2));
-            campsite.setCity(cursor.getString(3));
-            campsite.setLatitude(Double.parseDouble(cursor.getString(4)));
-            campsite.setLongitude(Double.parseDouble(cursor.getString(5)));
-            // Find all features linked to this campsite and add them to the object
-            findAndAddFeatures(campsite, db);
-        } else {
-            campsite = null;
+            campsite = singleCampsiteFromCursor(cursor);
+        }
+
+        cursor.close();
+        db.close();
+
+        return campsite;
+    }
+
+    /**
+     * This method does a fuzzy search for Campsites
+     * @param campsiteName
+     * @return campList
+     */
+    public ArrayList<Campsite> fuzzySearchCampsite(String campsiteName) {
+        // A list to hold a Campsite results
+        ArrayList<Campsite> campList = new ArrayList<>();
+
+        // Query for an exact match. An exact match should be first always
+        Campsite exactMatch = searchCampsite(campsiteName);
+        if (exactMatch != null) {
+            campList.add(exactMatch);
+        }
+
+        // Get the database
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Try to find matches containing each word provided
+        String splitName[] = campsiteName.split(" ");
+        for (String word : splitName) {
+            // Query for this word
+            String query = "SELECT * FROM " + TABLE_CAMPSITES +
+                           " WHERE " + CAMPSITE_COLUMN_NAME +
+                           " like \"%" + word + "%\"";
+
+            Cursor cursor = db.rawQuery(query, null);
+
+            // Make an ArrayList of any results
+            ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
+
+            // Combine this results list with the existing results list
+            campList = combineCampLists(campList, resultList);
+
+            cursor.close();
+        }
+
+        // Try to find matches containing each word provided assuming the first and last letters of
+        // each word are correct
+        for (String word : splitName) {
+            // Query for this potentially incorrectly spelled word
+            String query = "SELECT * FROM " + TABLE_CAMPSITES +
+                    " WHERE " + CAMPSITE_COLUMN_NAME +
+                    " like \"%" + word.charAt(0) + "%" + word.charAt(word.length() - 1) + "%\"";
+
+            Cursor cursor = db.rawQuery(query, null);
+
+            // Make an ArrayList of any results
+            ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
+
+            // Combine this results list with the existing results list
+            campList = combineCampLists(campList, resultList);
+
+            cursor.close();
         }
 
         db.close();
+
+        return campList;
+    }
+
+    /**
+     * This method creates an ArrayList of Campsites from a DB Cursor
+     * @param cursor
+     * @return
+     */
+    private ArrayList<Campsite> campsiteListFromCursor(Cursor cursor) {
+        ArrayList<Campsite> campList = new ArrayList<>();
+
+        // If we can't move to first, there are no results
+        if (cursor.moveToFirst()) {
+            // Get the first Campsite
+            campList.add(singleCampsiteFromCursor(cursor));
+
+            // Get any remaining Campsites
+            while (cursor.moveToNext()) {
+                campList.add(singleCampsiteFromCursor(cursor));
+            }
+        }
+
+        return campList;
+    }
+
+    /**
+     * This method gets a Campsite object from a Cursor at its current location
+     * @param cursor
+     * @return
+     */
+    private Campsite singleCampsiteFromCursor(Cursor cursor) {
+        Campsite campsite = new Campsite();
+        campsite.setId(Integer.parseInt(cursor.getString(0)));
+        campsite.setName(cursor.getString(1));
+        campsite.setState(cursor.getString(2));
+        campsite.setCity(cursor.getString(3));
+        campsite.setLatitude(Double.parseDouble(cursor.getString(4)));
+        campsite.setLongitude(Double.parseDouble(cursor.getString(5)));
+        // Find all features linked to this campsite and add them to the object
+        findAndAddFeatures(campsite);
+
         return campsite;
+    }
+
+    /**
+     * This method adds any unique Campsites from the addition list to the base list
+     * @param baseList
+     * @param additionList
+     * @return
+     */
+    private ArrayList<Campsite> combineCampLists(ArrayList<Campsite> baseList, ArrayList<Campsite> additionList) {
+        // Iterate through all addition Campsites
+        for (Campsite additionCamp : additionList) {
+            Boolean addCampsite = true;
+
+            // Compare this Addition campsite to all existing results to see if it is unique
+            for (Campsite baseCamp : baseList) {
+                // Compare based on names
+                if (baseCamp.getName().equals(additionCamp.getName())) {
+                    // Do not add this campsite
+                    addCampsite = false;
+                    // No need to continue comparing
+                    break;
+                }
+            }
+
+            // Add this campsite if necessary
+            if (addCampsite) {
+                baseList.add(additionCamp);
+            }
+        }
+
+        return baseList;
     }
 
     // This method queries the database for campsite features associated with a campsite
     // The resulting features are added to the campsite object
-    public void findAndAddFeatures(Campsite campsite, SQLiteDatabase db) {
+    public void findAndAddFeatures(Campsite campsite) {
         // Build the query
         String query = "SELECT * FROM " + TABLE_FEATURES +
                 " WHERE " + FEATURE_COLUMN_CAMPSITE_ID +
                 " = " + campsite.getId();
 
-        Cursor cursor = db.rawQuery(query, null);
+        Cursor cursor = this.getWritableDatabase().rawQuery(query, null);
 
         ArrayList<String> features = new ArrayList<String>();
 
@@ -196,6 +331,8 @@ public class DBHandler extends SQLiteOpenHelper {
                 features.add(cursor.getString(2));
             }
         }
+
+        cursor.close();
 
         campsite.setFeatures(features);
     }
