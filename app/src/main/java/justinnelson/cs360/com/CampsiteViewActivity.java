@@ -184,15 +184,13 @@ public class CampsiteViewActivity extends AppCompatActivity {
     class WeatherThread extends Thread {
         public void run() {
             try {
-                final String WEATHER_API_KEY = "211a551ddc0f903aa285b79abbe67355";
-
                 // Make a URL string to make a request from the weather API
                 String urlString = "https://api.openweathermap.org/data/2.5/weather?q=";
                 urlString += currentCampsite.getCity().toLowerCase();
                 urlString += ",";
                 urlString += getStateAbbreviation(currentCampsite.getState());
                 urlString += ",us&units=imperial&appid=";
-                urlString += WEATHER_API_KEY;
+                urlString += getString(R.string.weatherApiKey);
 
                 // Try to create the URL from the string
                 URL url = new URL(urlString);

@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Campsite Locator</string>
-    <string name="com.twitter.sdk.android.CONSUMER_KEY">lhYeE7jcV7uoHtnmOoKVw6AcE</string>
-    <string name="com.twitter.sdk.android.CONSUMER_SECRET">42QB77KsomzaizX8ZHopYHKyEYCGhVvLeZuxWvtgjkTdxyjpJZ</string>
     <string-array name="state_array">
         <item>Alabama</item>
         <item>Alaska</item>
