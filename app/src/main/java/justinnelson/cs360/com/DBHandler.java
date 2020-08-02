@@ -40,7 +40,10 @@ public class DBHandler extends SQLiteOpenHelper {
         super(ctx, DB_NAME, factory, DB_VER);
     }
 
-    // Creates all tables when the DB is initialized
+    /**
+     * Creates all tables when the DB is initialized
+     * @param db
+     */
     @Override
     public void onCreate(SQLiteDatabase db) {
         // Create the accounts table
@@ -71,7 +74,12 @@ public class DBHandler extends SQLiteOpenHelper {
         db.execSQL(CREATE_FEATURES_TABLE);
     }
 
-    // This method closes an open DB if a new one is created
+    /**
+     * This method closes an open DB if a new one is created
+     * @param db
+     * @param oldVersion
+     * @param newVersion
+     */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_ACCOUNTS);
@@ -80,7 +88,11 @@ public class DBHandler extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    // This method adds a new account to the database
+    /**
+     * This method adds a new account to the database
+     * @param username
+     * @param password
+     */
     public void addAccount(String username, String password) {
         ContentValues values = new ContentValues();
         values.put(ACCOUNTS_COLUMN_USERNAME, username);
@@ -91,6 +103,11 @@ public class DBHandler extends SQLiteOpenHelper {
         db.insert(TABLE_ACCOUNTS, null, values);
     }
 
+    /**
+     * This method checks if a given username already exists in the DB
+     * @param username
+     * @return
+     */
     public Boolean usernameExists(String username) {
         // Build the query
         String query = "SELECT * FROM " + TABLE_ACCOUNTS +
@@ -109,6 +126,12 @@ public class DBHandler extends SQLiteOpenHelper {
         return usernameExists;
     }
 
+    /**
+     * This method verifies login credentials
+     * @param username
+     * @param password
+     * @return
+     */
     public Boolean accountLogin(String username, String password) {
         // Build the query
         String query = "SELECT * FROM " + TABLE_ACCOUNTS +
@@ -129,7 +152,10 @@ public class DBHandler extends SQLiteOpenHelper {
         return successfulLogin;
     }
 
-    // This method adds a new campsite to the database
+    /**
+     * This method adds a new campsite to the database
+     * @param campsite
+     */
     public void addCampsite(Campsite campsite) {
         ContentValues values = new ContentValues();
         values.put(CAMPSITE_COLUMN_NAME, campsite.getName());
@@ -179,64 +205,163 @@ public class DBHandler extends SQLiteOpenHelper {
     }
 
     /**
+     * This method searches for a Campsite by either exact match on name or city
+     * @param campsiteName
+     * @param campsiteCity
+     * @return
+     */
+    public Campsite searchCampsiteExactNameOrCity(String campsiteName, String campsiteCity) {
+        // Build the query
+        String query = "SELECT * FROM " + TABLE_CAMPSITES +
+                       " WHERE " + CAMPSITE_COLUMN_NAME +
+                       " = \"" + campsiteName + "\"" +
+                       " OR " + CAMPSITE_COLUMN_CITY +
+                       " = \"" + campsiteCity + "\"";
+
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        Cursor cursor = db.rawQuery(query, null);
+
+        Campsite campsite = null;
+
+        if (cursor.moveToFirst()) {
+            campsite = singleCampsiteFromCursor(cursor);
+        }
+
+        cursor.close();
+        db.close();
+
+        return campsite;
+    }
+
+    /**
      * This method does a fuzzy search for Campsites
      * @param campsiteName
      * @return campList
      */
-    public ArrayList<Campsite> fuzzySearchCampsite(String campsiteName) {
+    public ArrayList<Campsite> fuzzySearchCampsite(String campsiteName, String campsiteState, String campsiteCity) {
         // A list to hold a Campsite results
         ArrayList<Campsite> campList = new ArrayList<>();
 
-        // Query for an exact match. An exact match should be first always
-        Campsite exactMatch = searchCampsite(campsiteName);
+        // Query for an exact match on name or city
+        Campsite exactMatch = searchCampsiteExactNameOrCity(campsiteName, campsiteCity);
         if (exactMatch != null) {
             campList.add(exactMatch);
         }
 
+        // If there is either name or city criteria, search based on those
+        if (!campsiteName.equals("") || !campsiteCity.equals("")) {
+            // Query for exact matches of each word in the name
+            ArrayList<Campsite> exactWordMatches = searchCampsiteExactWord(campsiteName, campsiteCity);
+            // Combine this results list with the existing results list
+            campList = combineCampLists(campList, exactWordMatches);
+
+            // Query for matches of potentially misspelled words
+            ArrayList<Campsite> typoWordMatches = searchCampsiteTypoWord(campsiteName, campsiteCity);
+            // Combine this results list with the existing results list
+            campList = combineCampLists(campList, typoWordMatches);
+
+            // Put campsites that match the selected state at the front of the list
+            campList = prioritizeSelectedState(campList, campsiteState);
+
+        } else {
+            // Search for all campsites in the selected state
+            campList = searchCampsiteByState(campsiteState);
+        }
+
+        return campList;
+    }
+
+    /**
+     * Searches for campsites by exact matches of any word in the search criteria
+     * @param campsiteName
+     * @return
+     */
+    private ArrayList<Campsite> searchCampsiteExactWord(String campsiteName, String campsiteCity) {
         // Get the database
         SQLiteDatabase db = this.getWritableDatabase();
 
-        // Try to find matches containing each word provided
-        String splitName[] = campsiteName.split(" ");
-        for (String word : splitName) {
-            // Query for this word
-            String query = "SELECT * FROM " + TABLE_CAMPSITES +
-                           " WHERE " + CAMPSITE_COLUMN_NAME +
-                           " like \"%" + word + "%\"";
-
-            Cursor cursor = db.rawQuery(query, null);
-
-            // Make an ArrayList of any results
-            ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
-
-            // Combine this results list with the existing results list
-            campList = combineCampLists(campList, resultList);
-
-            cursor.close();
+        // Find matches containing each word provided in the name
+        String query = "SELECT * FROM " + TABLE_CAMPSITES + " WHERE ";
+        if (!campsiteName.equals("")) {
+            String splitName[] = campsiteName.split(" ");
+            for (String word : splitName) {
+                // Append a conditional for this word
+                query += CAMPSITE_COLUMN_NAME + " like \"%" + word + "%\" OR ";
+            }
         }
 
-        // Try to find matches containing each word provided assuming the first and last letters of
-        // each word are correct
-        for (String word : splitName) {
-            // Query for this potentially incorrectly spelled word
-            String query = "SELECT * FROM " + TABLE_CAMPSITES +
-                    " WHERE " + CAMPSITE_COLUMN_NAME +
-                    " like \"%" + word.charAt(0) + "%" + word.charAt(word.length() - 1) + "%\"";
-
-            Cursor cursor = db.rawQuery(query, null);
-
-            // Make an ArrayList of any results
-            ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
-
-            // Combine this results list with the existing results list
-            campList = combineCampLists(campList, resultList);
-
-            cursor.close();
+        // Find matches containing each word provided in the name
+        if (!campsiteCity.equals("")) {
+            String splitCity[] = campsiteCity.split(" ");
+            for (String word : splitCity) {
+                // Append a conditional for this word
+                query += CAMPSITE_COLUMN_CITY + " like \"%" + word + "%\" OR ";
+            }
         }
 
+        // Remove the last OR
+        query = query.substring(0, query.length() - 4);
+
+        // Run the query
+        Cursor cursor = db.rawQuery(query, null);
+
+        // Make an ArrayList of any results
+        ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
+
+        // Close the cursor and DB
+        cursor.close();
         db.close();
 
-        return campList;
+        return resultList;
+    }
+
+    /**
+     * Searches for campsites assuming typos in any word of the search criteria
+     * @param campsiteName
+     * @return
+     */
+    private ArrayList<Campsite> searchCampsiteTypoWord(String campsiteName, String campsiteCity) {
+        // Get the database
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Find matches for words in the name with typos
+        String query = "SELECT * FROM " + TABLE_CAMPSITES + " WHERE ";
+        if (!campsiteName.equals("")) {
+            String splitName[] = campsiteName.split(" ");
+            for (String word : splitName) {
+                // Append a conditional for this word
+                query += CAMPSITE_COLUMN_NAME +
+                        " like \"%" + word.charAt(0) + "%" + word.charAt(word.length() - 1) + "%\"" +
+                        " OR ";
+            }
+        }
+
+        // Find matches for words in the city with typos
+        if (!campsiteCity.equals("")) {
+            String splitCity[] = campsiteCity.split(" ");
+            for (String word : splitCity) {
+                // Append a conditional for this word
+                query += CAMPSITE_COLUMN_CITY +
+                        " like \"%" + word.charAt(0) + "%" + word.charAt(word.length() - 1) + "%\"" +
+                        " OR ";
+            }
+        }
+
+        // Remove the last OR
+        query = query.substring(0, query.length() - 4);
+
+        // Run the query
+        Cursor cursor = db.rawQuery(query, null);
+
+        // Make an ArrayList of any results
+        ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
+
+        // Close the cursor and DB
+        cursor.close();
+        db.close();
+
+        return resultList;
     }
 
     /**
@@ -311,8 +436,65 @@ public class DBHandler extends SQLiteOpenHelper {
         return baseList;
     }
 
-    // This method queries the database for campsite features associated with a campsite
-    // The resulting features are added to the campsite object
+    /**
+     * This method sorts a Campsite list by giving priority to the selected state
+     * When searching for a campsite, location is probably a higher priority than name
+     * @param campList
+     * @param state
+     * @return
+     */
+    private ArrayList<Campsite> prioritizeSelectedState(ArrayList<Campsite> campList, String state) {
+        ArrayList<Campsite> correctStateList = new ArrayList();
+        ArrayList<Campsite> incorrectStateList = new ArrayList();
+
+        // Iterate through all campsites
+        for (Campsite currentCamp : campList) {
+            if (currentCamp.getState().equals(state)) {
+                // This campsite matches the selected state
+                correctStateList.add(currentCamp);
+            } else {
+                // This campsite does not match the selected state
+                incorrectStateList.add(currentCamp);
+            }
+        }
+
+        // Leave campsites with the correct state at the top of the list
+        correctStateList.addAll(incorrectStateList);
+
+        return correctStateList;
+    }
+
+    /**
+     * This method returns a list of all campsites in a single state
+     * @param campsiteState
+     * @return
+     */
+    private ArrayList<Campsite> searchCampsiteByState(String campsiteState) {
+        // Get the database
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        // Query only by state
+        String query = "SELECT * FROM " + TABLE_CAMPSITES + " WHERE " +
+                       CAMPSITE_COLUMN_STATE + " = \"" + campsiteState + "\"";
+
+        // Run the query
+        Cursor cursor = db.rawQuery(query, null);
+
+        // Make an ArrayList of any results
+        ArrayList<Campsite> resultList = campsiteListFromCursor(cursor);
+
+        // Close the cursor and DB
+        cursor.close();
+        db.close();
+
+        return resultList;
+    }
+
+    /**
+     * This method queries the database for campsite features associated with a campsite
+     * The resulting features are added to the campsite object
+     * @param campsite
+     */
     public void findAndAddFeatures(Campsite campsite) {
         // Build the query
         String query = "SELECT * FROM " + TABLE_FEATURES +
@@ -337,18 +519,16 @@ public class DBHandler extends SQLiteOpenHelper {
         campsite.setFeatures(features);
     }
 
-    // This method deletes a campsite with the provided name
+    /**
+     * This method deletes a campsite with the provided name
+     * @param campsiteName
+     * @return
+     */
     public boolean deleteCampsite(String campsiteName) {
-        String query = "SELECT * FROM " + TABLE_CAMPSITES +
-                " WHERE " + CAMPSITE_COLUMN_NAME + " = \"" + campsiteName + "\"";
-
         Campsite campsite = searchCampsite(campsiteName);
 
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        Cursor cursor = db.rawQuery(query, null);
-
         if (campsite != null) {
+            SQLiteDatabase db = this.getWritableDatabase();
             db.delete(TABLE_CAMPSITES, CAMPSITE_COLUMN_ID + " = ?",
                     new String[] {String.valueOf(campsite.getId())});
             db.delete(TABLE_FEATURES, FEATURE_COLUMN_CAMPSITE_ID + " = ?",
@@ -357,7 +537,6 @@ public class DBHandler extends SQLiteOpenHelper {
             return true;
         }
 
-        db.close();
         return false;
     }
 

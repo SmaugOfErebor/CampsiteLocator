@@ -11,13 +11,13 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 public class SearchCampsitesActivity extends AppCompatActivity {
 
     private EditText campsiteNameET;
     private Spinner stateSpinner;
+    private EditText campsiteCityET;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +36,7 @@ public class SearchCampsitesActivity extends AppCompatActivity {
 
         // Grab the controls holding input
         campsiteNameET = findViewById(R.id.campsiteName);
+        campsiteCityET = findViewById(R.id.campsiteCity);
     }
 
     public void onStop() {
@@ -46,15 +47,23 @@ public class SearchCampsitesActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    /**
+     * Handles the click event of the search button
+     * Searches for a list of campsites based on various criteria
+     * @param view
+     */
     public void searchCampsites(View view) {
         DBHandler dbHandler = new DBHandler(this, null, null, 0);
 
-        ArrayList<Campsite> campsiteList = dbHandler.fuzzySearchCampsite(campsiteNameET.getText().toString());
+        ArrayList<Campsite> campsiteList = dbHandler.fuzzySearchCampsite(
+                campsiteNameET.getText().toString(),
+                stateSpinner.getSelectedItem().toString(),
+                campsiteCityET.getText().toString());
 
         if (!campsiteList.isEmpty()) {
             // Start a campsite list view activity with the search results
             Intent newIntent = new Intent(this, CampsiteListViewActivity.class);
-            newIntent.putExtra("campsiteList", (Serializable) campsiteList);
+            newIntent.putExtra("campsiteList", campsiteList);
             this.startActivity(newIntent);
 
         } else {
@@ -63,6 +72,11 @@ public class SearchCampsitesActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Handles the click event of the delete button
+     * Deletes the specified campsite by name
+     * @param view
+     */
     public void deleteCampsite(View view) {
         DBHandler dbHandler = new DBHandler(this, null, null, 0);
 
